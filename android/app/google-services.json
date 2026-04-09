@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "387958365097",
+    "project_id": "roger-76747",
+    "storage_bucket": "roger-76747.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:387958365097:android:96cf645d63271452ebc2b8",
+        "android_client_info": {
+          "package_name": "com.roger"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCWyCQaXFpmlq3zy9Q2Nv4QBOVKaacTFlE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
