@@ -5,13 +5,39 @@
  * @format
  */
 
-import React, {useEffect} from 'react';
+import React, {useEffect, useState} from 'react';
 import messaging from '@react-native-firebase/messaging';
 import {NavigationContainer} from '@react-navigation/native';
 import AppNavigator from './src/navigation/AppNavigator';
-import {Alert} from 'react-native';
+import {ActivityIndicator, Alert, View} from 'react-native';
+import * as Keychain from 'react-native-keychain';
+import AuthScreen from './src/screens/AuthScreen';
 
 function App(): React.JSX.Element {
+  const [loading, setLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  useEffect(() => {
+    const checkLogin = async () => {
+      try {
+        const credentials = await Keychain.getGenericPassword();
+
+        if (credentials) {
+          console.log('🔐 Token found');
+          setIsLoggedIn(true);
+        } else {
+          console.log('❌ No token');
+          setIsLoggedIn(false);
+        }
+      } catch (e) {
+        console.log(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkLogin();
+  }, []);
+
   useEffect(() => {
     // Request permissions
     messaging()
@@ -38,9 +64,17 @@ function App(): React.JSX.Element {
 
     return unsubscribe;
   }, []);
+
+  if (loading) {
+    return (
+      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
   return (
     <NavigationContainer>
-      <AppNavigator />
+      {<AppNavigator isLoggedin={isLoggedIn} />}
     </NavigationContainer>
   );
 }

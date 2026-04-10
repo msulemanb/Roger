@@ -25,7 +25,7 @@ export default function HomeScreen({navigation}: Props) {
   useEffect(() => {
     const unsubscribe = firestore()
       .collection('chats')
-      .where('participants', 'array-contains', user.email)
+      .where('participants', 'array-contains', user?.email)
       .onSnapshot(snapshot => {
         const chatData = snapshot.docs.map(doc => ({
           id: doc.id,
@@ -47,7 +47,7 @@ export default function HomeScreen({navigation}: Props) {
       {/* Top bar */}
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-          <Text style={styles.avatar}>{user.email[0].toUpperCase()}</Text>
+          <Text style={styles.avatar}>{user?.email[0].toUpperCase()}</Text>
         </TouchableOpacity>
         <TextInput
           style={styles.search}
@@ -72,7 +72,7 @@ export default function HomeScreen({navigation}: Props) {
             style={styles.chatItem}
             onPress={() => openChat(item)}>
             <Text style={styles.chatText}>
-              {item.participants.filter(p => p !== user.email).join(', ')}
+              {item.participants.filter(p => p !== user?.email).join(', ')}
             </Text>
           </TouchableOpacity>
         )}

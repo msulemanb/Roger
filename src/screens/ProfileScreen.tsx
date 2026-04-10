@@ -3,6 +3,7 @@ import {View, Text, Button, StyleSheet} from 'react-native';
 import {auth} from '../services/firebase';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppNavigatorParams} from '../navigation/types';
+import * as Keychain from 'react-native-keychain';
 
 type ProfileScreenNavProps = NativeStackNavigationProp<
   AppNavigatorParams,
@@ -16,8 +17,9 @@ export default function ProfileScreen({navigation}: Props) {
   const handleLogout = () => {
     auth()
       .signOut()
-      .then(() => {
+      .then(async () => {
         navigation.replace('Auth'); // back to login/signup
+        await Keychain.resetGenericPassword();
       });
   };
 
