@@ -81,6 +81,7 @@ export default function ChatScreen({route}: Props) {
           value={text}
           onChangeText={setText}
           placeholder="Type a message"
+          autoCorrect={false}
         />
         <Button title="Send" onPress={sendMessage} />
       </View>

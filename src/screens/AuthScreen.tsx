@@ -1,12 +1,12 @@
 import React, {useState} from 'react';
 import {View, TextInput, Button, Text, StyleSheet, Alert} from 'react-native';
-import {auth} from '../services/firebase';
+import {auth, firestore} from '../services/firebase';
 import {AppNavigatorParams} from '../navigation/types';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {FirebaseAuthTypes} from '@react-native-firebase/auth';
+import * as Keychain from 'react-native-keychain';
 
 type AuthScreenNavProps = NativeStackNavigationProp<AppNavigatorParams, 'Auth'>;
-type Props = {navigation: AuthScreenNavProps};
+type Props = {navigation?: AuthScreenNavProps};
 
 export default function AuthScreen({navigation}: Props) {
   const [email, setEmail] = useState('');
@@ -16,25 +16,56 @@ export default function AuthScreen({navigation}: Props) {
   // Signup function
   const handleSignup = async () => {
     try {
-      await auth()
-        .createUserWithEmailAndPassword(email, password)
-        .then(res => console.log('You are signup:', res));
-      // used replace because it will remove auth screen from stack
-      navigation.replace('Home'); // Go to HomeScreen after signup
-    } catch (error) {
-      console.warn(error);
-      // Alert.alert(error?.message);
+      const res = await auth().createUserWithEmailAndPassword(email, password);
+
+      const token = await res.user.getIdToken();
+
+      await Keychain.setGenericPassword(
+        'userToken',
+        JSON.stringify({
+          token,
+          uid: res.user.uid,
+          email: res.user.email,
+        }),
+      );
+
+      console.log('BEFORE FIRESTORE');
+
+      await firestore().collection('users').doc(res.user.uid).set({
+        email: res.user.email,
+        uid: res.user.uid,
+        createdAt: firestore.FieldValue.serverTimestamp(),
+      });
+
+      console.log('AFTER FIRESTORE');
+
+      console.log('NAVIGATING...');
+      navigation?.replace('Home');
+    } catch (error: any) {
+      console.log(error);
+      // console.log('🔥 ERROR:', JSON.stringify(error));
     }
   };
 
   // Login function
   const handleLogin = async () => {
     try {
-      await auth()
-        .signInWithEmailAndPassword(email, password)
-        .then(res => console.log('You are login:', res));
+      const res = await auth().signInWithEmailAndPassword(email, password);
+      console.log('You are login:', res);
+      const token = await res.user.getIdToken();
+
+      await Keychain.setGenericPassword(
+        'userToken',
+        JSON.stringify({
+          token,
+          uid: res.user.uid,
+          email: res.user.email,
+        }),
+      );
+      console.log('NAVIGATING...');
+      navigation?.replace('Home'); // Go to HomeScreen after login
+      // await Keychain.setGenericPassword('userToken', token)
       // used replace because it will remove auth screen from stack
-      navigation.replace('Home'); // Go to HomeScreen after login
     } catch (error) {
       console.warn(error);
 

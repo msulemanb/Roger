@@ -10,9 +10,11 @@ import {AppNavigatorParams} from './types';
 
 const Stack = createNativeStackNavigator<AppNavigatorParams>();
 
-export default function AppNavigator() {
+export default function AppNavigator({isLoggedin}: {isLoggedin: boolean}) {
   return (
-    <Stack.Navigator screenOptions={{headerShown: true}}>
+    <Stack.Navigator
+      initialRouteName={isLoggedin ? 'Home' : 'Auth'}
+      screenOptions={{headerShown: true}}>
       <Stack.Screen name="Auth" component={AuthScreen} />
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
