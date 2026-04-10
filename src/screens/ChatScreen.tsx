@@ -9,7 +9,13 @@ import {
 } from 'react-native';
 import {firestore, auth} from '../services/firebase';
 
-export default function ChatScreen({route}) {
+import {AppNavigatorParams} from '../navigation/types';
+import {RouteProp} from '@react-navigation/native';
+
+type ChatScreenRouteProps = RouteProp<AppNavigatorParams, 'Chat'>;
+type Props = {route: ChatScreenRouteProps};
+
+export default function ChatScreen({route}: Props) {
   const {chatId} = route.params;
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');

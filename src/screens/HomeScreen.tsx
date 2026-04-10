@@ -9,8 +9,13 @@ import {
   StyleSheet,
 } from 'react-native';
 import {auth, firestore} from '../services/firebase';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {AppNavigatorParams} from '../navigation/types';
 
-export default function HomeScreen({navigation}) {
+type HomeScreenNavProps = NativeStackNavigationProp<AppNavigatorParams, 'Home'>;
+type Props = {navigation: HomeScreenNavProps};
+
+export default function HomeScreen({navigation}: Props) {
   const [chats, setChats] = useState([]);
   const [search, setSearch] = useState('');
 

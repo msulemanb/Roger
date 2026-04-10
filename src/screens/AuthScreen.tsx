@@ -1,8 +1,14 @@
 import React, {useState} from 'react';
 import {View, TextInput, Button, Text, StyleSheet, Alert} from 'react-native';
 import {auth} from '../services/firebase';
+import {AppNavigatorParams} from '../navigation/types';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {FirebaseAuthTypes} from '@react-native-firebase/auth';
 
-export default function AuthScreen({navigation}) {
+type AuthScreenNavProps = NativeStackNavigationProp<AppNavigatorParams, 'Auth'>;
+type Props = {navigation: AuthScreenNavProps};
+
+export default function AuthScreen({navigation}: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignup, setIsSignup] = useState(false); // toggle login/signup
@@ -13,10 +19,11 @@ export default function AuthScreen({navigation}) {
       await auth()
         .createUserWithEmailAndPassword(email, password)
         .then(res => console.log('You are signup:', res));
+      // used replace because it will remove auth screen from stack
       navigation.replace('Home'); // Go to HomeScreen after signup
     } catch (error) {
-      console.log(error);
-      Alert.alert(error.message);
+      console.warn(error);
+      // Alert.alert(error?.message);
     }
   };
 
@@ -26,11 +33,12 @@ export default function AuthScreen({navigation}) {
       await auth()
         .signInWithEmailAndPassword(email, password)
         .then(res => console.log('You are login:', res));
+      // used replace because it will remove auth screen from stack
       navigation.replace('Home'); // Go to HomeScreen after login
     } catch (error) {
-      console.log(error);
+      console.warn(error);
 
-      Alert.alert(error.message);
+      // Alert.alert(error.message);
     }
   };
 

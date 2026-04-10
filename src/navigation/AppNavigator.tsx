@@ -6,8 +6,9 @@ import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import AddFriendScreen from '../screens/AddFriendScreen';
 import ChatScreen from '../screens/ChatScreen';
+import {AppNavigatorParams} from './types';
 
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator<AppNavigatorParams>();
 
 export default function AppNavigator() {
   return (

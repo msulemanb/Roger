@@ -1,8 +1,16 @@
 import React from 'react';
 import {View, Text, Button, StyleSheet} from 'react-native';
 import {auth} from '../services/firebase';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {AppNavigatorParams} from '../navigation/types';
 
-export default function ProfileScreen({navigation}) {
+type ProfileScreenNavProps = NativeStackNavigationProp<
+  AppNavigatorParams,
+  'Profile'
+>;
+type Props = {navigation: ProfileScreenNavProps};
+
+export default function ProfileScreen({navigation}: Props) {
   const user = auth().currentUser;
 
   const handleLogout = () => {

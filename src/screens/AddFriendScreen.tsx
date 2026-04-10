@@ -1,8 +1,16 @@
 import React, {useState} from 'react';
 import {View, Text, TextInput, Button, StyleSheet, Alert} from 'react-native';
 import {firestore, auth} from '../services/firebase';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {AppNavigatorParams} from '../navigation/types';
 
-export default function AddFriendScreen({navigation}) {
+type AddFriendScreenNavProps = NativeStackNavigationProp<
+  AppNavigatorParams,
+  'AddFriend'
+>;
+type Props = {navigation: AddFriendScreenNavProps};
+
+export default function AddFriendScreen({navigation}: Props) {
   const [email, setEmail] = useState('');
   const currentUser = auth().currentUser;
 
