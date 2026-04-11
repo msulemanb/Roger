@@ -3,5 +3,9 @@ export type AppNavigatorParams = {
     Home: undefined;
     Profile: undefined;
     AddFriend: undefined;
-    Chat: { chatId: string };
+    Chat: {
+        chatId: string;
+        otherUserId: string;
+        otherUserFcmToken?: string; // optional (safe)
+    };
 };

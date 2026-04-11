@@ -24,7 +24,12 @@ export default function AddFriendScreen({navigation}: any) {
       return Alert.alert('User not found');
     }
 
-    const userData = snapshot.docs[0].data();
+    const doc = snapshot.docs[0];
+
+    const userData = {
+      id: doc.id,
+      ...doc.data(),
+    };
     setFoundUser(userData);
   };
 
@@ -32,7 +37,7 @@ export default function AddFriendScreen({navigation}: any) {
   const addFriend = async () => {
     if (!foundUser) return;
 
-    if (foundUser.email === currentUser?.email) {
+    if (foundUser.id === currentUser?.uid) {
       return Alert.alert("You can't add yourself");
     }
 
@@ -40,16 +45,24 @@ export default function AddFriendScreen({navigation}: any) {
       // Check existing chat
       const chatSnapshot = await firestore()
         .collection('chats')
-        .where('participants', 'array-contains', currentUser?.email)
+        .where('participants', 'array-contains', currentUser?.uid)
         .get();
 
       const existingChat = chatSnapshot.docs.find(doc =>
-        doc.data().participants.includes(foundUser.email),
+        (doc.data().participants || []).includes(foundUser.id),
       );
 
       if (existingChat) {
         Alert.alert('Chat already exists');
-        navigation.navigate('Chat', {chatId: existingChat.id});
+        console.log('foundUser:', foundUser);
+        console.log('currentUser:', currentUser);
+
+        navigation.navigate('Chat', {
+          chatId: existingChat?.id,
+          otherUserId: foundUser.id,
+          otherUserEmail: foundUser.email,
+          otherUserFcmToken: foundUser.fcmToken ?? '',
+        });
         return;
       }
 
@@ -57,14 +70,22 @@ export default function AddFriendScreen({navigation}: any) {
       const chatRef = await firestore()
         .collection('chats')
         .add({
-          participants: [currentUser?.email, foundUser.email],
+          participants: [currentUser?.uid, foundUser.id],
           lastMessage: '',
           createdAt: firestore.FieldValue.serverTimestamp(),
         });
 
       Alert.alert('Friend added & chat created');
 
-      navigation.navigate('Chat', {chatId: chatRef.id});
+      console.log('foundUser:', foundUser);
+      console.log('currentUser:', currentUser);
+
+      navigation.navigate('Chat', {
+        chatId: chatRef.id,
+        otherUserId: foundUser.id,
+        otherUserEmail: foundUser.email,
+        otherUserFcmToken: foundUser.fcmToken ?? '',
+      });
     } catch (error: any) {
       console.log(error);
       Alert.alert(error.message);

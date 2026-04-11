@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {View, TextInput, Button, Text, StyleSheet, Alert} from 'react-native';
-import {auth, firestore} from '../services/firebase';
+import {auth, firestore, messaging} from '../services/firebase';
 import {AppNavigatorParams} from '../navigation/types';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import * as Keychain from 'react-native-keychain';
@@ -37,6 +37,16 @@ export default function AuthScreen({navigation}: Props) {
         createdAt: firestore.FieldValue.serverTimestamp(),
       });
 
+      const fcmToken = await messaging().getToken();
+
+      await firestore().collection('users').doc(res.user.uid).set(
+        {
+          email: res.user.email,
+          fcmToken: fcmToken,
+        },
+        {merge: true},
+      );
+
       console.log('AFTER FIRESTORE');
 
       console.log('NAVIGATING...');
@@ -61,6 +71,16 @@ export default function AuthScreen({navigation}: Props) {
           uid: res.user.uid,
           email: res.user.email,
         }),
+      );
+
+      const fcmToken = await messaging().getToken();
+
+      await firestore().collection('users').doc(res.user.uid).set(
+        {
+          email: res.user.email,
+          fcmToken: fcmToken,
+        },
+        {merge: true},
       );
       console.log('NAVIGATING...');
       navigation?.replace('Home'); // Go to HomeScreen after login

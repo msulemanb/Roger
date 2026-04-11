@@ -6,12 +6,12 @@
  */
 
 import React, {useEffect, useState} from 'react';
-import messaging from '@react-native-firebase/messaging';
 import {NavigationContainer} from '@react-navigation/native';
 import AppNavigator from './src/navigation/AppNavigator';
 import {ActivityIndicator, Alert, View} from 'react-native';
 import * as Keychain from 'react-native-keychain';
 import AuthScreen from './src/screens/AuthScreen';
+import {messaging} from './src/services/firebase';
 
 function App(): React.JSX.Element {
   const [loading, setLoading] = useState(true);
@@ -60,6 +60,17 @@ function App(): React.JSX.Element {
     // Listen to messages when app is in foreground
     const unsubscribe = messaging().onMessage(async remoteMessage => {
       Alert.alert('New Message', remoteMessage.notification?.body);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = messaging().onMessage(async remoteMessage => {
+      Alert.alert(
+        remoteMessage.notification?.title ?? 'New Message',
+        remoteMessage.notification?.body ?? '',
+      );
     });
 
     return unsubscribe;
