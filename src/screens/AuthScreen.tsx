@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {View, TextInput, Button, Text, StyleSheet, Alert} from 'react-native';
-import {auth, firestore, messaging} from '../services/firebase';
+import {auth, firestore} from '../services/firebase';
 import {AppNavigatorParams} from '../navigation/types';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import * as Keychain from 'react-native-keychain';
@@ -37,12 +37,12 @@ export default function AuthScreen({navigation}: Props) {
         createdAt: firestore.FieldValue.serverTimestamp(),
       });
 
-      const fcmToken = await messaging().getToken();
+      // const fcmToken = await messaging().getToken();
 
       await firestore().collection('users').doc(res.user.uid).set(
         {
           email: res.user.email,
-          fcmToken: fcmToken,
+          // fcmToken: fcmToken,
         },
         {merge: true},
       );
@@ -73,19 +73,18 @@ export default function AuthScreen({navigation}: Props) {
         }),
       );
 
-      const fcmToken = await messaging().getToken();
+      // const fcmToken = await messaging().getToken();
 
       await firestore().collection('users').doc(res.user.uid).set(
         {
           email: res.user.email,
-          fcmToken: fcmToken,
+          // fcmToken: fcmToken,
         },
         {merge: true},
       );
       console.log('NAVIGATING...');
-      navigation?.replace('Home'); // Go to HomeScreen after login
-      // await Keychain.setGenericPassword('userToken', token)
       // used replace because it will remove auth screen from stack
+      navigation?.replace('Home'); // Go to HomeScreen after login
     } catch (error) {
       console.warn(error);
 
