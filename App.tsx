@@ -6,16 +6,29 @@
  */
 
 import React, {useEffect, useState} from 'react';
-import {NavigationContainer} from '@react-navigation/native';
+import {
+  DarkTheme,
+  DefaultTheme,
+  NavigationContainer,
+} from '@react-navigation/native';
 import AppNavigator from './src/navigation/AppNavigator';
-import {ActivityIndicator, Alert, View} from 'react-native';
+import {ActivityIndicator, Alert, useColorScheme, View} from 'react-native';
 import * as Keychain from 'react-native-keychain';
-import AuthScreen from './src/screens/AuthScreen';
+import BootSplash from 'react-native-bootsplash';
+
+// import AuthScreen from './src/screens/AuthScreen';
 // import {messaging} from './src/services/firebase';
 
 function App(): React.JSX.Element {
+  const isDark = useColorScheme() === 'dark';
+
   const [loading, setLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    BootSplash.hide({fade: true});
+  }, []);
+
   useEffect(() => {
     const checkLogin = async () => {
       try {
@@ -86,12 +99,13 @@ function App(): React.JSX.Element {
   if (loading) {
     return (
       <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-        <ActivityIndicator />
+        {/* <ActivityIndicator /> */}
       </View>
     );
   }
+
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={isDark ? DarkTheme : DefaultTheme}>
       {<AppNavigator isLoggedin={isLoggedIn} />}
     </NavigationContainer>
   );
