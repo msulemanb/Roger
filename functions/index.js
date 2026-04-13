@@ -1,25 +1,39 @@
-const functions = require('firebase-functions');
-const admin = require('firebase-admin');
+// const functions = require('firebase-functions');
+// const admin = require('firebase-admin');
 
-admin.initializeApp();
+// admin.initializeApp();
 
-exports.sendMessageNotification = functions.firestore
-  .document('chats/{chatId}/messages/{messageId}')
-  .onCreate(async (snap, context) => {
-    const msg = snap.data();
+// // 🔔 SEND PUSH ON NEW MESSAGE
+// exports.sendNotificationOnMessage = functions.firestore
+//   .document('chats/{chatId}/messages/{messageId}')
+//   .onCreate(async (snapshot, context) => {
+//     const message = snapshot.data();
 
-    const token = msg.receiverFcmToken;
+//     const receiverId = message.receiverId;
 
-    if (!token) return null;
+//     if (!receiverId) return null;
 
-    return admin.messaging().send({
-      token,
-      notification: {
-        title: 'New Message',
-        body: msg.text,
-      },
-      data: {
-        chatId: context.params.chatId,
-      },
-    });
-  });
+//     // 🔥 Get receiver token
+//     const userDoc = await admin
+//       .firestore()
+//       .collection('users')
+//       .doc(receiverId)
+//       .get();
+
+//     const userData = userDoc.data();
+
+//     const token = userData?.fcmToken;
+
+//     if (!token) return null;
+
+//     // 📩 Send notification
+//     await admin.messaging().send({
+//       token,
+//       notification: {
+//         title: 'New Message',
+//         body: message.text || 'You have a new message',
+//       },
+//     });
+
+//     return null;
+//   });

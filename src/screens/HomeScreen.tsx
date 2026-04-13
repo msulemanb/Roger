@@ -29,10 +29,23 @@ export default function HomeScreen({navigation}: Props) {
       .collection('chats')
       .where('participants', 'array-contains', user.uid)
       .onSnapshot(snapshot => {
-        const chatData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        // console.log(snapshot.docs[0].users);
+
+        const chatData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          // console.log(data?.users);
+
+          const otherUserId = data.participants.find(id => id !== user.uid);
+
+          // 👇 get user from object map
+          const otherUser = data.users?.[otherUserId] || null;
+
+          return {
+            id: doc.id,
+            ...data,
+            otherUser,
+          };
+        });
         setChats(chatData);
       });
 
@@ -95,17 +108,12 @@ export default function HomeScreen({navigation}: Props) {
         data={chats} // 🔥 removed broken search filter
         keyExtractor={item => item.id}
         renderItem={({item}) => {
-          const otherUserId = item.participants.find(
-            (p: string) => p !== user?.uid,
-          );
-
+          const {email, uid} = item?.otherUser;
           return (
             <TouchableOpacity
               style={styles.chatItem}
               onPress={() => openChat(item)}>
-              <Text style={styles.chatText}>
-                {otherUserId || 'Unknown User'}
-              </Text>
+              <Text style={styles.chatText}>{email ? email : uid}</Text>
             </TouchableOpacity>
           );
         }}

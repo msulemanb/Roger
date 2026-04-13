@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
-import {messaging} from '../services/firebase';
+// import {messaging} from '../services/firebase';
 
 export default function ChatScreen({route}: any) {
   const {chatId, otherUserId, otherUserFcmToken} = route.params;
@@ -27,22 +27,22 @@ export default function ChatScreen({route}: any) {
 
   const currentUser = auth().currentUser;
 
-  useEffect(() => {
-    const saveToken = async () => {
-      const token = await messaging().getToken();
+  // useEffect(() => {
+  //   const saveToken = async () => {
+  // const token = await messaging().getToken();
 
-      await firestore().collection('users').doc(currentUser?.uid).set(
-        {
-          fcmToken: token,
-        },
-        {merge: true},
-      );
-    };
+  //   await firestore().collection('users').doc(currentUser?.uid).set(
+  //     {
+  //       fcmToken: token,
+  //     },
+  //     {merge: true},
+  //   );
+  // };
 
-    if (currentUser?.uid) {
-      saveToken();
-    }
-  }, [currentUser]);
+  //   if (currentUser?.uid) {
+  //     saveToken();
+  //   }
+  // }, [currentUser]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -98,36 +98,46 @@ export default function ChatScreen({route}: any) {
     return () => clearTimeout(timeout);
   }, [text]);
 
-  // 📤 SEND MESSAGE
   const sendMessage = async () => {
-    if (!text.trim()) return;
+    if (!text.trim() || !currentUser?.uid || !otherUserId) return;
 
-    console.log('send message - > 1', {
-      chatId,
-      text,
-      senderEmail: currentUser?.email,
-      senderId: currentUser?.uid, // ADD THIS
-      receiverId: otherUserId, // ADD THIS
-      receiverFcmToken: otherUserFcmToken,
-      createdAt: firestore.FieldValue.serverTimestamp(),
-    });
-    await firestore()
-      .collection('chats')
-      .doc(chatId)
-      .collection('messages')
-      .add({
-        text,
-        senderEmail: currentUser?.email,
-        senderId: currentUser?.uid, // ADD THIS
-        receiverId: otherUserId, // ADD THIS
-        receiverFcmToken: otherUserFcmToken,
-        createdAt: firestore.FieldValue.serverTimestamp(),
-      });
+    try {
+      // 1️⃣ Save message in Firestore
+      await firestore()
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages')
+        .add({
+          text: text.trim(),
+          senderId: currentUser.uid,
+          receiverId: otherUserId,
+          createdAt: firestore.FieldValue.serverTimestamp(),
+        });
 
-    setText('');
-    setTyping(false);
+      // 2️⃣ SEND PUSH (FREE WAY)
+      if (otherUserFcmToken) {
+        await fetch('https://fcm.googleapis.com/fcm/send', {
+          method: 'POST',
+          headers: {
+            Authorization: 'key=YOUR_SERVER_KEY_HERE',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            to: otherUserFcmToken,
+            notification: {
+              title: 'New Message',
+              body: text,
+            },
+          }),
+        });
+      }
+
+      setText('');
+      setTyping(false);
+    } catch (error) {
+      console.log('🔥 sendMessage error:', error);
+    }
   };
-
   const handleScroll = (e: any) => {
     const {layoutMeasurement, contentOffset, contentSize} = e.nativeEvent;
 
@@ -171,12 +181,32 @@ export default function ChatScreen({route}: any) {
         data={messages}
         keyExtractor={item => item.id}
         renderItem={({item}) => {
-          const isMe = item.senderEmail === currentUser?.email;
+          const isMe = item.senderId === currentUser?.uid;
+          const dateAndTime = item.createdAt?.toDate()
+            ? item.createdAt?.toDate()
+            : null;
+          const formattedTime = dateAndTime
+            ? '(' +
+              dateAndTime.toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              }) +
+              ')'
+            : '';
 
           return (
             <View
-              style={[styles.message, isMe ? styles.myMsg : styles.otherMsg]}>
-              <Text style={{color: 'white'}}>{item.text}</Text>
+              style={[
+                isMe
+                  ? {alignSelf: 'flex-end', flexDirection: 'row'}
+                  : {alignSelf: 'flex-start', flexDirection: 'row-reverse'},
+                {alignItems: 'center'},
+              ]}>
+              <Text style={styles.timeFormat}>{formattedTime}</Text>
+              <View
+                style={[styles.message, isMe ? styles.myMsg : styles.otherMsg]}>
+                <Text style={{color: 'white'}}>{item.text}</Text>
+              </View>
             </View>
           );
         }}
@@ -236,12 +266,12 @@ const styles = StyleSheet.create({
   },
 
   myMsg: {
-    alignSelf: 'flex-end',
+    // alignSelf: 'flex-end',
     backgroundColor: 'green',
   },
 
   otherMsg: {
-    alignSelf: 'flex-start',
+    // alignSelf: 'flex-start',
     backgroundColor: 'gray',
   },
 
@@ -257,6 +287,7 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 8,
   },
+  timeFormat: {marginHorizontal: 5, fontSize: 10},
   bottomScrollButton: {
     position: 'absolute',
     bottom: 80,

@@ -73,6 +73,20 @@ export default function AddFriendScreen({navigation}: any) {
           participants: [currentUser?.uid, foundUser.id],
           lastMessage: '',
           createdAt: firestore.FieldValue.serverTimestamp(),
+          users: {
+            ...(currentUser?.uid
+              ? {
+                  [currentUser.uid]: {
+                    uid: currentUser.uid,
+                    email: currentUser.email ?? '',
+                  },
+                }
+              : {}),
+            [foundUser.id]: {
+              uid: foundUser.id,
+              email: foundUser.email,
+            },
+          },
         });
 
       Alert.alert('Friend added & chat created');
