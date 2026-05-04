@@ -23,15 +23,39 @@ export default function AuthScreen({navigation}: Props) {
   const [isSignup, setIsSignup] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const buildSearchIndex = (text: string) => {
-    const result = [];
-    const cleaned = text.toLowerCase().trim();
+  const buildSearchIndex = (...fields: string[]) => {
+    const result = new Set<string>();
 
-    for (let i = 1; i <= cleaned.length; i++) {
-      result.push(cleaned.substring(0, i));
-    }
+    const normalize = (text: string) => text.toLowerCase().trim();
 
-    return result;
+    const addCombinations = (text: string) => {
+      if (!text) return;
+
+      const cleaned = normalize(text);
+
+      // ✅ split intelligently for names, emails, usernames
+      const words = cleaned.split(/[\s@._-]+/).filter(Boolean);
+
+      // single words
+      words.forEach(w => result.add(w));
+
+      // full string
+      result.add(cleaned);
+
+      // combinations (ordered)
+      for (let i = 0; i < words.length; i++) {
+        let combo = '';
+
+        for (let j = i; j < words.length; j++) {
+          combo = combo ? `${combo} ${words[j]}` : words[j];
+          result.add(combo);
+        }
+      }
+    };
+
+    fields.forEach(addCombinations);
+
+    return Array.from(result);
   };
 
   // 🔥 Username generator
@@ -83,6 +107,8 @@ export default function AuthScreen({navigation}: Props) {
 
       const username = await generateUniqueUsername(normalizedEmail);
 
+      const searchIndex = buildSearchIndex(fullName, username, email);
+
       // 🔥 reserve username
       await firestore().collection('usernames').doc(username).set({
         uid,
@@ -90,22 +116,15 @@ export default function AuthScreen({navigation}: Props) {
       });
 
       // 🔥 create user
-      await firestore()
-        .collection('users')
-        .doc(uid)
-        .set({
-          uid,
-          email: normalizedEmail,
-          fullName,
-          username,
-          createdAt: firestore.FieldValue.serverTimestamp(),
-          updatedAt: firestore.FieldValue.serverTimestamp(),
-          searchIndex: [
-            ...buildSearchIndex(fullName.toLowerCase()),
-            ...buildSearchIndex(username),
-            ...buildSearchIndex(email),
-          ],
-        });
+      await firestore().collection('users').doc(uid).set({
+        uid,
+        email: normalizedEmail,
+        fullName,
+        username,
+        createdAt: firestore.FieldValue.serverTimestamp(),
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+        searchIndex,
+      });
 
       // 🔐 store token
       const token = await res.user.getIdToken();
@@ -175,11 +194,12 @@ export default function AuthScreen({navigation}: Props) {
         {isSignup && (
           <TextInput
             style={styles.input}
-            placeholder="Full Name"
+            placeholder="Enter Full Name (max 19 chars)"
             placeholderTextColor="#999"
             value={fullName}
             onChangeText={setFullName}
             autoCorrect={false}
+            maxLength={19}
           />
         )}
 
