@@ -1,149 +1,268 @@
 import React, {useState} from 'react';
-import {View, Text, TextInput, Button, StyleSheet, Alert} from 'react-native';
-import {firestore, auth} from '../services/firebase';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
+  Image,
+  Alert,
+} from 'react-native';
+import firestore from '@react-native-firebase/firestore';
+import auth from '@react-native-firebase/auth';
+
+/* ---------------- TYPES ---------------- */
+
+type User = {
+  uid: string;
+  email: string;
+  fullName?: string;
+  username?: string;
+  profileImage?: string | null;
+  fcmToken?: string;
+};
+
+type Chat = {
+  id: string;
+  participants: string[];
+};
+
+/* ---------------- SCREEN ---------------- */
 
 export default function AddFriendScreen({navigation}: any) {
-  const [email, setEmail] = useState('');
-  const [foundUser, setFoundUser] = useState<any>(null);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const currentUser = auth().currentUser;
 
-  // 🔍 Search user
-  const searchUser = async () => {
-    console.log('1- email', email);
-    if (!email) return Alert.alert('Enter email');
+  /* ---------------- SEARCH USERS ---------------- */
 
-    const snapshot = await firestore()
-      .collection('users')
-      .where('email', '==', email.trim())
-      .get();
-
-    console.log('2- snapsot', snapshot);
-    if (snapshot.empty) {
-      setFoundUser(null);
-      return Alert.alert('User not found');
-    }
-
-    const doc = snapshot.docs[0];
-
-    const userData = {
-      id: doc.id,
-      ...doc.data(),
-    };
-    setFoundUser(userData);
-  };
-
-  // ➕ Add friend / create chat
-  const addFriend = async () => {
-    if (!foundUser) return;
-
-    if (foundUser.id === currentUser?.uid) {
-      return Alert.alert("You can't add yourself");
-    }
+  const searchUsers = async () => {
+    if (!query.trim()) return;
 
     try {
-      // Check existing chat
-      const chatSnapshot = await firestore()
-        .collection('chats')
-        .where('participants', 'array-contains', currentUser?.uid)
+      setLoading(true);
+
+      const q = query.toLowerCase().trim();
+
+      const snap = await firestore()
+        .collection('users')
+        .where('searchIndex', 'array-contains', q)
         .get();
 
-      const existingChat = chatSnapshot.docs.find(doc =>
-        (doc.data().participants || []).includes(foundUser.id),
+      const users: User[] = snap.docs
+        .map(doc => {
+          const data = doc.data() as User;
+          return data; // uid already inside document
+        })
+        .filter(user => user.uid !== currentUser?.uid);
+
+      setResults(users);
+    } catch (err) {
+      console.log(err);
+      Alert.alert('Error searching users');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ---------------- OPEN OR CREATE CHAT ---------------- */
+
+  const openChat = async (user: User) => {
+    if (!currentUser?.uid) return;
+
+    try {
+      // check existing chat
+      const snap = await firestore()
+        .collection('chats')
+        .where('participants', 'array-contains', currentUser.uid)
+        .get();
+
+      const existing = snap.docs.find(doc =>
+        (doc.data().participants || []).includes(user.uid),
       );
 
-      if (existingChat) {
-        Alert.alert('Chat already exists');
-        console.log('foundUser:', foundUser);
-        console.log('currentUser:', currentUser);
-
-        navigation.navigate('Chat', {
-          chatId: existingChat?.id,
-          otherUserId: foundUser.id,
-          otherUserEmail: foundUser.email,
-          otherUserFcmToken: foundUser.fcmToken ?? '',
+      if (existing) {
+        return navigation.navigate('Chat', {
+          chatId: existing.id,
+          otherUserId: user.uid,
+          otherUserFcmToken: user.fcmToken ?? '',
         });
-        return;
       }
 
-      // Create new chat
+      // create new chat
       const chatRef = await firestore()
         .collection('chats')
         .add({
-          participants: [currentUser?.uid, foundUser.id],
-          lastMessage: '',
+          participants: [currentUser.uid, user.uid],
           createdAt: firestore.FieldValue.serverTimestamp(),
+          lastMessage: '',
           users: {
-            ...(currentUser?.uid
-              ? {
-                  [currentUser.uid]: {
-                    uid: currentUser.uid,
-                    email: currentUser.email ?? '',
-                  },
-                }
-              : {}),
-            [foundUser.id]: {
-              uid: foundUser.id,
-              email: foundUser.email,
+            [currentUser.uid]: {
+              uid: currentUser.uid,
+              email: currentUser.email,
+            },
+            [user.uid]: {
+              uid: user.uid,
+              email: user.email,
+              fullName: user.fullName,
+              username: user.username,
+              profileImage: user.profileImage || null,
             },
           },
         });
 
-      Alert.alert('Friend added & chat created');
-
-      console.log('foundUser:', foundUser);
-      console.log('currentUser:', currentUser);
-
       navigation.navigate('Chat', {
         chatId: chatRef.id,
-        otherUserId: foundUser.id,
-        otherUserEmail: foundUser.email,
-        otherUserFcmToken: foundUser.fcmToken ?? '',
+        otherUserId: user.uid,
+        otherUserFcmToken: user.fcmToken ?? '',
       });
-    } catch (error: any) {
-      console.log(error);
-      Alert.alert(error.message);
+    } catch (err) {
+      console.log(err);
+      Alert.alert('Failed to create chat');
     }
   };
+
+  /* ---------------- UI ---------------- */
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Add Friend</Text>
 
+      {/* SEARCH INPUT */}
       <TextInput
-        placeholder="Enter email"
-        value={email}
-        onChangeText={setEmail}
         style={styles.input}
-        keyboardType="email-address"
-        autoCapitalize="none"
+        placeholder="Search by name, username or email"
+        placeholderTextColor="#94A3B8"
+        value={query}
+        onChangeText={setQuery}
       />
 
-      <Button title="Search" onPress={searchUser} />
+      <TouchableOpacity style={styles.btn} onPress={searchUsers}>
+        <Text style={styles.btnText}>Search</Text>
+      </TouchableOpacity>
 
-      {foundUser && (
-        <View style={styles.result}>
-          <Text>{foundUser.email}</Text>
-          <Button title="Add Friend" onPress={addFriend} />
-        </View>
-      )}
+      {/* LOADING */}
+      {loading && <ActivityIndicator color="#3B82F6" />}
+
+      {/* RESULTS */}
+      <FlatList
+        data={results}
+        keyExtractor={item => item.uid}
+        contentContainerStyle={{paddingTop: 20}}
+        ListEmptyComponent={
+          !loading ? <Text style={styles.empty}>No users found</Text> : null
+        }
+        renderItem={({item}) => (
+          <TouchableOpacity style={styles.card} onPress={() => openChat(item)}>
+            {/* AVATAR */}
+            {item.profileImage ? (
+              <Image source={{uri: item.profileImage}} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarText}>
+                  {item.fullName?.[0] ||
+                    item.username?.[0] ||
+                    item.email?.[0] ||
+                    '?'}
+                </Text>
+              </View>
+            )}
+
+            {/* INFO */}
+            <View style={{marginLeft: 10}}>
+              <Text style={styles.name}>{item.fullName || item.username}</Text>
+
+              <Text style={styles.sub}>
+                @{item.username} • {item.email}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, padding: 20},
-  title: {fontSize: 20, marginBottom: 20},
-  input: {
-    borderWidth: 1,
-    padding: 10,
-    marginBottom: 10,
-    borderRadius: 5,
+  container: {
+    flex: 1,
+    backgroundColor: '#0F172A',
+    padding: 15,
   },
-  result: {
+
+  title: {
+    fontSize: 24,
+    color: '#fff',
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+
+  input: {
+    backgroundColor: '#1E293B',
+    padding: 12,
+    borderRadius: 10,
+    color: '#fff',
+  },
+
+  btn: {
+    backgroundColor: '#3B82F6',
+    padding: 12,
+    borderRadius: 10,
+    marginTop: 10,
+  },
+
+  btnText: {
+    color: '#fff',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E293B',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+
+  avatar: {
+    width: 45,
+    height: 45,
+    borderRadius: 12,
+  },
+
+  avatarFallback: {
+    width: 45,
+    height: 45,
+    borderRadius: 12,
+    backgroundColor: '#3B82F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  avatarText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+
+  name: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+
+  sub: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+
+  empty: {
+    color: '#94A3B8',
+    textAlign: 'center',
     marginTop: 20,
-    padding: 10,
-    borderWidth: 1,
-    borderRadius: 5,
   },
 });
