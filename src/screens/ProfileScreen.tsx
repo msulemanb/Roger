@@ -3,141 +3,258 @@ import {
   View,
   Text,
   TextInput,
-  Button,
-  Image,
   StyleSheet,
-  Alert,
   TouchableOpacity,
+  Image,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import * as Keychain from 'react-native-keychain';
-import {AppNavigatorParams} from '../navigation/types';
-import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {launchImageLibrary} from 'react-native-image-picker';
-type ProfileScreenNavProps = NativeStackNavigationProp<
-  AppNavigatorParams,
-  'Profile'
->;
-type Props = {navigation: ProfileScreenNavProps};
 
-export default function ProfileScreen({navigation}: Props) {
+export default function ProfileScreen({navigation}: any) {
   const user = auth().currentUser;
 
-  const [name, setName] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  // 🔥 LOAD PROFILE
+  // 🔥 Load profile
   useEffect(() => {
-    const loadUser = async () => {
-      const doc = await firestore().collection('users').doc(user?.uid).get();
+    const load = async () => {
+      if (!user?.uid) return;
 
-      if (doc.exists) {
-        const data = doc.data();
-        setName(data?.name || '');
-        setPhoto(data?.photoURL || null);
-      }
+      const doc = await firestore().collection('users').doc(user.uid).get();
+
+      const data = doc.data();
+
+      setFullName(data?.fullName || '');
+      setUsername(data?.username || '');
+      setPhoto(data?.profileImage || null);
+
+      setLoading(false);
     };
 
-    loadUser();
+    load();
   }, []);
 
-  const handleLogout = () => {
-    auth()
-      .signOut()
-      .then(async () => {
-        navigation.replace('Auth'); // back to login/signup
-        await Keychain.resetGenericPassword();
-      });
-  };
-
-  // 🖼 PICK IMAGE
+  // 🖼 Pick image
   const pickImage = async () => {
     const result = await launchImageLibrary({
       mediaType: 'photo',
+      quality: 0.7,
     });
 
-    if (result.assets && result.assets.length > 0) {
+    if (result.assets?.length) {
       setPhoto(result.assets[0].uri || null);
     }
   };
 
-  // 💾 SAVE PROFILE
+  // 🔍 check username uniqueness
+  const isUsernameTaken = async (newUsername: string) => {
+    const snap = await firestore()
+      .collection('usernames')
+      .doc(newUsername)
+      .get();
+
+    return snap.exists;
+  };
+
+  // 💾 Save profile
   const saveProfile = async () => {
     try {
-      await firestore().collection('users').doc(user?.uid).set(
+      if (!user?.uid) return;
+
+      setSaving(true);
+
+      const newUsername = username.toLowerCase().trim();
+
+      const doc = await firestore().collection('users').doc(user.uid).get();
+
+      const oldUsername = doc.data()?.username;
+
+      // 🔥 if username changed → validate
+      if (newUsername !== oldUsername) {
+        const taken = await isUsernameTaken(newUsername);
+
+        if (taken) {
+          Alert.alert('Username already taken');
+          setSaving(false);
+          return;
+        }
+
+        // delete old mapping
+        if (oldUsername) {
+          await firestore().collection('usernames').doc(oldUsername).delete();
+        }
+
+        // create new mapping
+        await firestore().collection('usernames').doc(newUsername).set({
+          uid: user.uid,
+        });
+      }
+
+      // 💾 update user profile
+      await firestore().collection('users').doc(user.uid).set(
         {
-          name,
-          photoURL: photo,
-          email: user?.email,
-          uid: user?.uid,
+          fullName,
+          username: newUsername,
+          profileImage: photo,
+          updatedAt: firestore.FieldValue.serverTimestamp(),
         },
         {merge: true},
       );
 
-      Alert.alert('Profile Updated');
-    } catch (error) {
-      console.log(error);
+      Alert.alert('Profile updated');
+      setSaving(false);
+    } catch (e) {
+      console.log(e);
+      setSaving(false);
     }
   };
 
+  // 🚪 logout
+  const logout = async () => {
+    await auth().signOut();
+    await Keychain.resetGenericPassword();
+    navigation.replace('Auth');
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color="#3B82F6" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Logout</Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Profile</Text>
+
+        <TouchableOpacity onPress={logout}>
+          <Text style={styles.logout}>Logout</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Avatar */}
+      <TouchableOpacity onPress={pickImage}>
+        <Image
+          source={{
+            uri: photo || 'https://i.pravatar.cc/150?img=12',
+          }}
+          style={styles.avatar}
+        />
+        <Text style={styles.changePhoto}>Change Photo</Text>
       </TouchableOpacity>
 
-      <Text style={styles.title}>Profile</Text>
-
-      <Image
-        source={
-          photo
-            ? {uri: photo}
-            : {
-                uri: 'https://images.freeimages.com/images/large-previews/2e0/digital-mind-concept-0410-5708791.jpg',
-              }
-        }
-        style={styles.avatar}
+      {/* Inputs */}
+      <TextInput
+        style={styles.input}
+        placeholder="Full Name"
+        placeholderTextColor="#94A3B8"
+        value={fullName}
+        onChangeText={setFullName}
       />
 
-      <Button title="Change Photo" onPress={pickImage} />
-
       <TextInput
-        placeholder="Enter name"
-        value={name}
-        onChangeText={setName}
         style={styles.input}
+        placeholder="Username"
+        placeholderTextColor="#94A3B8"
+        value={username}
+        onChangeText={setUsername}
+        autoCapitalize="none"
       />
 
       <Text style={styles.email}>{user?.email}</Text>
 
-      <Button title="Save Profile" onPress={saveProfile} />
+      {/* Save */}
+      <TouchableOpacity
+        style={styles.saveBtn}
+        onPress={saveProfile}
+        disabled={saving}>
+        <Text style={styles.saveText}>
+          {saving ? 'Saving...' : 'Save Changes'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, alignItems: 'center', padding: 20},
-  title: {fontSize: 22, marginBottom: 20},
-  avatar: {width: 100, height: 100, borderRadius: 50, marginBottom: 10},
-  input: {
-    width: '100%',
-    borderWidth: 1,
-    padding: 10,
-    marginVertical: 10,
-    borderRadius: 8,
+  container: {
+    flex: 1,
+    backgroundColor: '#0F172A',
+    padding: 20,
   },
-  email: {marginBottom: 10},
-  logoutButton: {
-    position: 'absolute',
-    height: 50,
-    borderRadius: 40,
-    paddingHorizontal: 10,
-    right: 20,
-    top: 20,
-    backgroundColor: 'purple',
+
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  logoutText: {color: 'white', fontSize: 14},
+
+  title: {
+    fontSize: 26,
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+
+  logout: {
+    color: '#F87171',
+    fontWeight: '600',
+  },
+
+  avatar: {
+    width: 110,
+    height: 110,
+    borderRadius: 30,
+    alignSelf: 'center',
+    marginTop: 20,
+  },
+
+  changePhoto: {
+    color: '#60A5FA',
+    textAlign: 'center',
+    marginTop: 5,
+  },
+
+  input: {
+    backgroundColor: '#1E293B',
+    color: '#fff',
+    padding: 12,
+    borderRadius: 10,
+    marginTop: 15,
+  },
+
+  email: {
+    color: '#94A3B8',
+    marginTop: 10,
+    textAlign: 'center',
+  },
+
+  saveBtn: {
+    backgroundColor: '#3B82F6',
+    padding: 14,
+    borderRadius: 12,
+    marginTop: 20,
+  },
+
+  saveText: {
+    color: '#fff',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
