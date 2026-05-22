@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
+import {useTheme} from '../../theme/useTheme';
 
 /* ---------------- TYPES ---------------- */
 
@@ -37,6 +38,8 @@ export default function AddFriendScreen({navigation}: any) {
   const [loading, setLoading] = useState(false);
 
   const currentUser = auth().currentUser;
+  const theme = useTheme();
+  const styles = getStyles(theme);
 
   /* ---------------- SEARCH USERS ---------------- */
 
@@ -186,6 +189,91 @@ export default function AddFriendScreen({navigation}: any) {
     </View>
   );
 }
+
+const getStyles = (theme: ReturnType<typeof useTheme>) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+      padding: 15,
+    },
+
+    title: {
+      fontSize: 24,
+      color: theme.textPrimary,
+      fontWeight: 'bold',
+      marginBottom: 10,
+    },
+
+    input: {
+      backgroundColor: theme.surface,
+      padding: 12,
+      borderRadius: 10,
+      color: theme.textPrimary,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+
+    btn: {
+      backgroundColor: theme.brand,
+      padding: 12,
+      borderRadius: 10,
+      marginTop: 10,
+    },
+
+    btnText: {
+      color: theme.brandForeground,
+      textAlign: 'center',
+      fontWeight: '600',
+    },
+
+    card: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.surface,
+      padding: 12,
+      borderRadius: 12,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+
+    avatar: {
+      width: 45,
+      height: 45,
+      borderRadius: 12,
+    },
+
+    avatarFallback: {
+      width: 45,
+      height: 45,
+      borderRadius: 12,
+      backgroundColor: theme.brand,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+
+    avatarText: {
+      color: theme.brandForeground,
+      fontWeight: 'bold',
+    },
+
+    name: {
+      color: theme.textPrimary,
+      fontWeight: '600',
+    },
+
+    sub: {
+      color: theme.textSecondary,
+      fontSize: 12,
+    },
+
+    empty: {
+      color: theme.textSecondary,
+      textAlign: 'center',
+      marginTop: 20,
+    },
+  });
 
 const styles = StyleSheet.create({
   container: {

@@ -5,44 +5,55 @@ import {auth, firestore} from '../../services/firebase';
 import {AppNavigatorParams} from '../../navigation/types';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import * as Keychain from 'react-native-keychain';
-
-import {buildSearchIndex, checkUsernameAvailability} from './AuthScreen.utils';
-
-import {getStyles} from './Authscreen.styles';
+import {buildSearchIndex, checkUsernameAvailability} from './utils';
 import {useTheme} from '../../theme/useTheme';
-
-/* -------------------- TYPES -------------------- */
+import {useForm, Controller} from 'react-hook-form';
+import {authScreenStyles} from './styles';
 
 type AuthScreenNavProps = NativeStackNavigationProp<AppNavigatorParams, 'Auth'>;
 
-type Props = {
-  navigation?: AuthScreenNavProps;
-};
+type Props = {navigation?: AuthScreenNavProps};
 
-/* -------------------- COMPONENT -------------------- */
+/* -------------------- ZOD SCHEMA -------------------- */
+
+interface FormData {
+  fullName: string;
+  username: string;
+  identifier: string;
+  password: string;
+  confirmPassword: string;
+}
 
 export default function AuthScreen({navigation}: Props) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
-  const [fullName, setFullName] = useState('');
-  const [username, setUsername] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-
   const [isSignup, setIsSignup] = useState(false);
   const [loading, setLoading] = useState(false);
   const theme = useTheme();
-  const styles = getStyles(theme);
+  const styles = authScreenStyles(theme);
+
+  /* -------------------- REACT HOOK FORM -------------------- */
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: {errors},
+  } = useForm<FormData>({
+    defaultValues: {
+      fullName: '',
+      username: '',
+      identifier: '',
+      password: '',
+      confirmPassword: '',
+    },
+  });
 
   /* -------------------- SIGNUP -------------------- */
-
-  const handleSignup = async () => {
-    if (!email || !password || !username || !fullName || !confirmPassword) {
+  const handleSignup = async (data: FormData) => {
+    if (!data.fullName || !data.username || !data.confirmPassword) {
       Alert.alert('Please fill all fields');
       return;
     }
 
-    if (password !== confirmPassword) {
+    if (data.password !== data.confirmPassword) {
       Alert.alert('Passwords do not match');
       return;
     }
@@ -50,44 +61,41 @@ export default function AuthScreen({navigation}: Props) {
     setLoading(true);
 
     try {
-      const normalizedEmail = email.trim().toLowerCase();
+      const normalizedEmail = data.identifier.trim().toLowerCase();
 
       const uniqueUsername = await checkUsernameAvailability(
-        username,
+        data.username,
         firestore,
       );
 
       const res = await auth().createUserWithEmailAndPassword(
         normalizedEmail,
-        password,
+        data.password,
       );
 
       const uid = res.user.uid;
 
       const searchIndex = buildSearchIndex(
-        fullName,
+        data.fullName,
         uniqueUsername,
         normalizedEmail,
       );
 
-      // reserve username
       await firestore().collection('usernames').doc(uniqueUsername).set({
         uid,
         createdAt: firestore.FieldValue.serverTimestamp(),
       });
 
-      // create user
       await firestore().collection('users').doc(uid).set({
         uid,
         email: normalizedEmail,
-        fullName,
+        fullName: data.fullName,
         username: uniqueUsername,
         createdAt: firestore.FieldValue.serverTimestamp(),
         updatedAt: firestore.FieldValue.serverTimestamp(),
         searchIndex,
       });
 
-      // store token
       const token = await res.user.getIdToken();
 
       await Keychain.setGenericPassword(
@@ -97,7 +105,6 @@ export default function AuthScreen({navigation}: Props) {
 
       navigation?.replace('Home');
     } catch (error: any) {
-      console.log({error});
       Alert.alert(error.message || 'Signup failed');
     } finally {
       setLoading(false);
@@ -105,21 +112,14 @@ export default function AuthScreen({navigation}: Props) {
   };
 
   /* -------------------- LOGIN -------------------- */
-
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Please fill all fields');
-      return;
-    }
-
+  const handleLogin = async (data: FormData) => {
     setLoading(true);
 
     try {
-      const identifier = email.trim().toLowerCase();
+      const identifier = data.identifier.trim().toLowerCase();
 
       let loginEmail = identifier;
 
-      // username login support
       if (!identifier.includes('@')) {
         const snapshot = await firestore()
           .collection('users')
@@ -131,11 +131,13 @@ export default function AuthScreen({navigation}: Props) {
           throw new Error('Username not found');
         }
 
-        const userData = snapshot.docs[0].data();
-        loginEmail = userData.email;
+        loginEmail = snapshot.docs[0].data().email;
       }
 
-      const res = await auth().signInWithEmailAndPassword(loginEmail, password);
+      const res = await auth().signInWithEmailAndPassword(
+        loginEmail,
+        data.password,
+      );
 
       const token = await res.user.getIdToken();
 
@@ -150,15 +152,18 @@ export default function AuthScreen({navigation}: Props) {
 
       navigation?.replace('Home');
     } catch (error: any) {
-      console.log({error});
       Alert.alert(error.message || 'Login failed');
     } finally {
       setLoading(false);
     }
   };
 
-  /* -------------------- UI -------------------- */
+  const onSubmit = (data: FormData) => {
+    if (isSignup) handleSignup(data);
+    else handleLogin(data);
+  };
 
+  /* -------------------- UI -------------------- */
   return (
     <View style={styles.container}>
       <View style={styles.card}>
@@ -172,67 +177,106 @@ export default function AuthScreen({navigation}: Props) {
 
         {/* FULL NAME */}
         {isSignup && (
-          <TextInput
-            style={styles.input}
-            placeholder="Enter Full Name (max 19 chars)"
-            placeholderTextColor="#999"
-            value={fullName}
-            onChangeText={setFullName}
-            autoCorrect={false}
-            maxLength={19}
+          <Controller
+            control={control}
+            name="fullName"
+            rules={isSignup && {required: 'Fullname is required.'}}
+            render={({field: {onChange, onBlur, value}}) => (
+              <TextInput
+                style={styles.input}
+                placeholder="Enter Full Name (max 19 chars)"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                maxLength={19}
+              />
+            )}
           />
         )}
+        {errors.fullName && <Text>{errors.fullName.message}</Text>}
 
-        {/* EMAIL / USERNAME */}
-        <TextInput
-          style={styles.input}
-          placeholder={isSignup ? 'Email' : 'Email or Username'}
-          placeholderTextColor="#999"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType={isSignup ? 'email-address' : 'default'}
+        {/* EMAIL / USERNAME INPUT */}
+        <Controller
+          control={control}
+          name="identifier"
+          rules={{required: 'Identifier is required.'}}
+          render={({field: {onChange, value}}) => (
+            <TextInput
+              style={styles.input}
+              placeholder={isSignup ? 'Email' : 'Email or Username'}
+              value={value}
+              onChangeText={onChange}
+              autoCapitalize="none"
+              keyboardType={isSignup ? 'email-address' : 'default'}
+            />
+          )}
         />
+        {errors.identifier && <Text>{errors.identifier.message}</Text>}
 
-        {/* USERNAME */}
+        {/* USERNAME (SIGNUP ONLY) */}
         {isSignup && (
-          <TextInput
-            style={styles.input}
-            placeholder="Username"
-            placeholderTextColor="#999"
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-            keyboardType="default"
-          />
+          <>
+            <Controller
+              control={control}
+              name="username"
+              render={({field: {onChange, value}}) => (
+                <TextInput
+                  style={styles.input}
+                  placeholder="Username"
+                  value={value}
+                  onChangeText={onChange}
+                  autoCapitalize="none"
+                />
+              )}
+            />
+            {errors.username && <Text>{errors.username.message}</Text>}
+          </>
         )}
 
         {/* PASSWORD */}
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#999"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
+        <Controller
+          control={control}
+          name="password"
+          rules={{required: 'Password is required.'}}
+          render={({field: {onChange, value}}) => (
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              value={value}
+              onChangeText={onChange}
+              secureTextEntry
+            />
+          )}
         />
+        {errors.password && <Text>{errors.password.message}</Text>}
 
         {/* CONFIRM PASSWORD */}
         {isSignup && (
-          <TextInput
-            style={styles.input}
-            placeholder="Confirm Password"
-            placeholderTextColor="#999"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-          />
+          <>
+            <Controller
+              control={control}
+              name="confirmPassword"
+              rules={{required: 'ConfirmPaaword is required.'}}
+              render={({field: {onChange, value}}) => (
+                <TextInput
+                  style={styles.input}
+                  placeholder="Confirm Password"
+                  value={value}
+                  onChangeText={onChange}
+                  secureTextEntry
+                />
+              )}
+            />
+            {errors.confirmPassword && (
+              <Text>{errors.confirmPassword.message}</Text>
+            )}
+          </>
         )}
 
-        {/* BUTTON */}
+        {/* SUBMIT */}
         <TouchableOpacity
           style={styles.button}
-          onPress={isSignup ? handleSignup : handleLogin}
+          onPress={handleSubmit(onSubmit)}
           disabled={loading}>
           <Text style={styles.buttonText}>
             {loading ? 'Please wait...' : isSignup ? 'Sign Up' : 'Login'}
@@ -240,7 +284,11 @@ export default function AuthScreen({navigation}: Props) {
         </TouchableOpacity>
 
         {/* TOGGLE */}
-        <TouchableOpacity onPress={() => setIsSignup(prev => !prev)}>
+        <TouchableOpacity
+          onPress={() => {
+            setIsSignup(!isSignup);
+            reset();
+          }}>
           <Text style={styles.toggle}>
             {isSignup
               ? 'Already have an account? Login'

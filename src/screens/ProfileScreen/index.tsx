@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TextInput,
-  StyleSheet,
   TouchableOpacity,
   Image,
   Alert,
@@ -13,15 +12,19 @@ import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import * as Keychain from 'react-native-keychain';
 import {launchImageLibrary} from 'react-native-image-picker';
+import {useTheme} from '../../theme/useTheme';
+import {profileScreenStyles} from './styles';
 
 export default function ProfileScreen({navigation}: any) {
   const user = auth().currentUser;
 
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const theme = useTheme();
+  const styles = profileScreenStyles(theme);
 
   // 🔥 Load profile
   useEffect(() => {
@@ -50,7 +53,7 @@ export default function ProfileScreen({navigation}: any) {
     });
 
     if (result.assets?.length) {
-      setPhoto(result.assets[0].uri || null);
+      setPhoto(result.assets[0].uri);
     }
   };
 
@@ -147,7 +150,9 @@ export default function ProfileScreen({navigation}: any) {
       <TouchableOpacity onPress={pickImage}>
         <Image
           source={{
-            uri: photo || 'https://i.pravatar.cc/150?img=12',
+            uri:
+              photo ??
+              'https://www.vhv.rs/dpng/d/505-5058560_person-placeholder-image-free-hd-png-download.png',
           }}
           style={styles.avatar}
         />
@@ -186,75 +191,3 @@ export default function ProfileScreen({navigation}: any) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0F172A',
-    padding: 20,
-  },
-
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  title: {
-    fontSize: 26,
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-
-  logout: {
-    color: '#F87171',
-    fontWeight: '600',
-  },
-
-  avatar: {
-    width: 110,
-    height: 110,
-    borderRadius: 30,
-    alignSelf: 'center',
-    marginTop: 20,
-  },
-
-  changePhoto: {
-    color: '#60A5FA',
-    textAlign: 'center',
-    marginTop: 5,
-  },
-
-  input: {
-    backgroundColor: '#1E293B',
-    color: '#fff',
-    padding: 12,
-    borderRadius: 10,
-    marginTop: 15,
-  },
-
-  email: {
-    color: '#94A3B8',
-    marginTop: 10,
-    textAlign: 'center',
-  },
-
-  saveBtn: {
-    backgroundColor: '#3B82F6',
-    padding: 14,
-    borderRadius: 12,
-    marginTop: 20,
-  },
-
-  saveText: {
-    color: '#fff',
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
