@@ -75,12 +75,23 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.roger"
+    def versionPropsFile = file('version.properties')
+
+    def versionProps = new Properties()
+
+    if (versionPropsFile.exists()) {
+        versionProps.load(new FileInputStream(versionPropsFile))
+    }
+
+    def VERSION_CODE = versionProps['VERSION_CODE'].toInteger()
+
     defaultConfig {
         applicationId "com.roger"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+
+        versionCode VERSION_CODE
+        versionName "1.0.${VERSION_CODE}"
     }
     signingConfigs {
         debug {
@@ -130,3 +141,30 @@ dependencies {
 
 apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
 apply plugin: 'com.google.gms.google-services'
+
+tasks.whenTaskAdded { task ->
+    if (task.name == 'assembleRelease') {
+        task.doLast {
+            def versionPropsFile = file('version.properties')
+            def versionProps = new Properties()
+
+            versionProps.load(new FileInputStream(versionPropsFile))
+
+            def versionCode = versionProps['VERSION_CODE'].toInteger() + 1
+
+            versionProps['VERSION_CODE'] = versionCode.toString()
+
+            versionProps.store(versionPropsFile.newWriter(), null)
+        }
+    }
+}
+
+android.applicationVariants.all { variant ->
+    variant.outputs.all { output ->
+
+        def versionCode = variant.versionCode
+        def versionName = variant.versionName
+
+        outputFileName = "Roger.${versionName}.${versionCode}.apk"
+    }
+}
