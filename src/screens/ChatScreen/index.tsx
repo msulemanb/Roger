@@ -4,13 +4,14 @@ import {
   Text,
   TextInput,
   FlatList,
-  StyleSheet,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
+import {useTheme} from '../../theme/useTheme';
+import {chatScreenStyles} from './styles';
 
 export default function ChatScreen({route}: any) {
   const {chatId, otherUserId, otherUserFcmToken} = route.params;
@@ -18,6 +19,8 @@ export default function ChatScreen({route}: any) {
   const [messages, setMessages] = useState<any[]>([]);
   const [text, setText] = useState('');
   const [typingUsers, setTypingUsers] = useState<any>({});
+  const theme = useTheme();
+  const styles = chatScreenStyles(theme);
 
   const flatListRef = useRef<FlatList>(null);
   const currentUser = auth().currentUser;
@@ -150,9 +153,6 @@ export default function ChatScreen({route}: any) {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      {/* Typing indicator */}
-      {someoneTyping && <Text style={styles.typing}>Typing...</Text>}
-
       {/* Messages */}
       <FlatList
         ref={flatListRef}
@@ -175,6 +175,9 @@ export default function ChatScreen({route}: any) {
         }}
       />
 
+      {/* Typing indicator */}
+      {someoneTyping && <Text style={styles.typing}>Typing...</Text>}
+
       {/* Input */}
       <View style={styles.inputRow}>
         <TextInput
@@ -194,65 +197,3 @@ export default function ChatScreen({route}: any) {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0F172A',
-    padding: 10,
-  },
-
-  msgRow: {
-    marginVertical: 4,
-    flexDirection: 'row',
-  },
-
-  left: {
-    justifyContent: 'flex-start',
-  },
-
-  right: {
-    justifyContent: 'flex-end',
-  },
-
-  bubble: {
-    padding: 10,
-    borderRadius: 12,
-    maxWidth: '75%',
-  },
-
-  myMsg: {
-    backgroundColor: '#3B82F6',
-  },
-
-  otherMsg: {
-    backgroundColor: '#334155',
-  },
-
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 10,
-  },
-
-  input: {
-    flex: 1,
-    backgroundColor: '#1E293B',
-    padding: 10,
-    borderRadius: 10,
-    color: '#fff',
-    marginRight: 10,
-  },
-
-  btn: {
-    backgroundColor: '#3B82F6',
-    padding: 10,
-    borderRadius: 10,
-  },
-
-  typing: {
-    color: '#94A3B8',
-    marginBottom: 5,
-    marginLeft: 5,
-  },
-});
