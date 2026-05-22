@@ -30,15 +30,15 @@ It supports authentication, real-time messaging, user profiles, and media sharin
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="./screenshots/1.jpg" width="200"/>
-  <img src="./screenshots/2.jpg" width="200"/>
-  <img src="./screenshots/3.jpg" width="200"/>
+  <img src="./screenshots/1.jpeg" width="200"/>
+  <img src="./screenshots/2.jpeg" width="200"/>
+  <img src="./screenshots/3.jpeg" width="200"/>
 </p>
 
 <p align="center">
-  <img src="./screenshots/4.jpg" width="200"/>
-  <img src="./screenshots/5.jpg" width="200"/>
-  <img src="./screenshots/6.jpg" width="200"/>
+  <img src="./screenshots/4.jpeg" width="200"/>
+  <img src="./screenshots/5.jpeg" width="200"/>
+  <img src="./screenshots/6.jpeg" width="200"/>
 </p>
 
 ---
