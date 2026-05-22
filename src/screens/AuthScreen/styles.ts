@@ -1,6 +1,7 @@
 import {StyleSheet} from 'react-native';
+import {useTheme} from '../../theme/useTheme';
 
-export const getStyles = (theme: any) =>
+export const authScreenStyles = (theme: ReturnType<typeof useTheme>) =>
   StyleSheet.create({
     container: {
       flex: 1,

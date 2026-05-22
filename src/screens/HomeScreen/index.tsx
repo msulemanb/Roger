@@ -5,13 +5,14 @@ import {
   TextInput,
   FlatList,
   TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
   Image,
 } from 'react-native';
-import {auth, firestore} from '../services/firebase';
+import {auth, firestore} from '../../services/firebase';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {AppNavigatorParams} from '../navigation/types';
+import {AppNavigatorParams} from '../../navigation/types';
+import {useTheme} from '../../theme/useTheme';
+import {homeScreenStyles} from './styles';
 
 type HomeScreenNavProps = NativeStackNavigationProp<AppNavigatorParams, 'Home'>;
 type Props = {navigation: HomeScreenNavProps};
@@ -21,6 +22,8 @@ export default function HomeScreen({navigation}: Props) {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const theme = useTheme();
+  const styles = homeScreenStyles(theme);
 
   const user = auth().currentUser;
 
@@ -204,111 +207,3 @@ export default function HomeScreen({navigation}: Props) {
     </View>
   );
 }
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0F172A',
-    padding: 15,
-  },
-
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  title: {
-    fontSize: 28,
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-
-  addBtn: {
-    backgroundColor: '#3B82F6',
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  addBtnText: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-
-  search: {
-    backgroundColor: '#1E293B',
-    color: '#fff',
-    padding: 10,
-    borderRadius: 10,
-    marginTop: 15,
-    marginBottom: 10,
-  },
-
-  chatCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1E293B',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 10,
-  },
-
-  avatar: {
-    width: 45,
-    height: 45,
-    borderRadius: 12,
-    backgroundColor: '#3B82F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-
-  avatarText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-
-  name: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-
-  message: {
-    color: '#94A3B8',
-    marginTop: 2,
-  },
-
-  empty: {
-    color: '#94A3B8',
-    textAlign: 'center',
-    marginTop: 20,
-  },
-  avatarBtn: {
-    marginRight: 10,
-  },
-
-  avatarFallback: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: '#3B82F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  avatarImageSmall: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-  },
-  avatarImage: {
-    width: 45,
-    height: 45,
-    borderRadius: 12,
-    marginRight: 10,
-  },
-});
